@@ -1,0 +1,9 @@
+target/
+.metals/
+.vscode/
+.bsp/
+.bloop/
+metals.sbt
+.idea/
+application.dev.conf
+application.prod.conf
