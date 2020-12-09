@@ -20,14 +20,14 @@ object DateTest extends DefaultRunnableSpec {
       assert(Date.parseScheduleDateStr("11/20/2020 5:30 PM"))(equalTo(millis))
     },
     test("isMoreThanEqual5HoursAgo returns true if date is at least 5 hours ago") {
-      val d2 = Date.parseClassDateStr("2020-11-20 17:30:00")
       val d1 = Date.parseClassDateStr("2020-11-20 12:30:00")
-      assert(Date.isMoreThanEqual5HoursAgo(d1, d2))(equalTo(true))
+      val d2 = Date.parseClassDateStr("2020-11-20 17:30:00")
+      assert(Date.isMoreThanEqual5HoursAway(d1, d2))(equalTo(true))
     },
     test("isMoreThanEqual5HoursAgo returns false if date is less than 5 hours ago") {
-      val d2 = Date.parseClassDateStr("2020-11-20 17:30:00")
       val d1 = Date.parseClassDateStr("2020-11-20 12:30:01")
-      assert(Date.isMoreThanEqual5HoursAgo(d1, d2))(equalTo(false))
+      val d2 = Date.parseClassDateStr("2020-11-20 17:30:00")
+      assert(Date.isMoreThanEqual5HoursAway(d1, d2))(equalTo(false))
     }
   )
 

@@ -28,7 +28,10 @@ object Date {
     calendar.getTimeInMillis()
   }
 
-  def isMoreThanEqual5HoursAgo(d1: Long, d2: Long): Boolean = {
+  /**
+    * @return true if d2 is at least more than 5 hours after d1
+    */
+  def isMoreThanEqual5HoursAway(d1: Long, d2: Long): Boolean = {
     val fiveHoursMillis = 1000 * 60 * 60 * 5
     (d2 - d1) >= fiveHoursMillis
   }

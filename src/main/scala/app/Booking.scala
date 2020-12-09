@@ -1,10 +1,11 @@
 package app
 
-import app.models.DanceClass
+import app.models.{DanceClass, Staff}
 import zio._
 import zio.clock._
 import parsing.Date
 import zio.logging._
+
 import java.util.concurrent.TimeUnit
 
 object Booking {
@@ -23,7 +24,7 @@ object Booking {
         c.isDesirable &&
         c.bookable &&
         !existingBookingTimes.contains(classStartTime) &&
-        Date.isMoreThanEqual5HoursAgo(classStartTime, now)
+        Date.isMoreThanEqual5HoursAway(now, classStartTime)
       })
     }
 
