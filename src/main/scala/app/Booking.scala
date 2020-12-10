@@ -1,6 +1,6 @@
 package app
 
-import app.models.{DanceClass, Staff}
+import app.models.DanceClass
 import zio._
 import zio.clock._
 import parsing.Date

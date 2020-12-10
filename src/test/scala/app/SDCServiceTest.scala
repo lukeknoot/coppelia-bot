@@ -11,10 +11,9 @@ import zio.logging._
 
 object SDCServiceTest extends DefaultRunnableSpec with TestUtil {
 
-  def stub(data: String) = whenRequestMatchesPartial {
-    case r if r.method == Method.POST && r.uri.toString.startsWith(SDCService.Live.baseURI) =>
-      Response.ok(data)
-  }
+  def stub(data: String) = whenRequestMatches(r =>
+    r.method == Method.POST && r.uri.toString.startsWith(SDCService.Live.baseURI)
+  ).thenRespond(Response.ok(data))
 
   override def spec = suite("SDCService") {
     testM("Parses classes from API") {

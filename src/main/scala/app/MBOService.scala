@@ -60,7 +60,6 @@ object MBOService {
         basicRequest
           .get(uri"$addToCartURI?$queryParams")
           .cookies(cookies)
-          .followRedirects(false)
       }
 
       for {
@@ -68,7 +67,7 @@ object MBOService {
         cookies  <- ZIO.accessM[AppState](_.get.get)
         request  <- ZIO.fromTry(getRequest(cookies))
         response <- send(request)
-        body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse(_))
+        body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
         body
       }
@@ -77,7 +76,7 @@ object MBOService {
     override def checkout = {
 
       def getRequest(cookies: Seq[CookieWithMeta]) = Try {
-        basicRequest.get(uri"$checkoutURI").cookies(cookies).followRedirects(false)
+        basicRequest.get(uri"$checkoutURI").cookies(cookies)
       }
 
       for {
@@ -85,7 +84,7 @@ object MBOService {
         cookies  <- ZIO.accessM[AppState](_.get.get)
         request  <- ZIO.fromTry(getRequest(cookies))
         response <- send(request)
-        body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse(_))
+        body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
         body
       }
@@ -106,7 +105,7 @@ object MBOService {
       for {
         _         <- log.info("Loading cookie and auth token for sign in")
         response  <- send(basicRequest.get(uri"$signInPageURI"))
-        htmlBody  <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse(_))
+        htmlBody  <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
         authToken <- getAuthToken(htmlBody)
       } yield {
         AuthData(response.cookies, authToken)
@@ -163,17 +162,29 @@ object MBOService {
       }
     }
 
+    /** TODO: Confirm timeout behaviour of site.
+      *
+      * Have only seen this once but seems like their page will
+      * tell us if it's a timeout.
+      */
+    def failIfTimeout(htmlBody: String): RIO[Logging, Unit] = {
+      if (htmlBody.contains("timeout") || htmlBody.contains("timed out")) {
+        ZIO.fail(new Exception("Couldn't load schedule"))
+      } else {
+        log.info("Found no existing bookings")
+      }
+    }
+
     override def getExistingBookingStartTimes = for {
       _          <- log.info("Getting existing bookings")
       cookies    <- ZIO.accessM[AppState](_.get.get)
       request    <- ZIO.fromTry(Try(basicRequest.get(uri"$scheduleURI").cookies(cookies)))
       response   <- send(request)
-      body       <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse(_))
+      body       <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       startTimes <- Schedule.getStartTimes(body)
       _          <- if (startTimes.nonEmpty)
                       log.info(s"Found existing bookings for times: ${startTimes.toString()}")
-                    else
-                      log.info("Found no existing bookings")
+                    else failIfTimeout(body)
     } yield {
       startTimes
     }

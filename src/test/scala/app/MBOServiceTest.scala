@@ -71,9 +71,22 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         _       <- MBOService.signIn("", "")
         cookies <- ZIO.accessM[AppState](_.get.get)
       } yield assert(cookies)(equalTo(Seq(CookieWithMeta("test-cookie", "value"))))
+    },
+    testM("Fails if schedule loading times out") {
+      val httpStub = managedResource("schedule-mock-timeout.html").use(data => {
+        whenRequestMatches { r =>
+          r.method == Method.GET && r.uri.toString.startsWith(MBOService.Live.scheduleURI)
+        }.thenRespond(Response.ok(data))
+      })
+      httpStub *>
+        MBOService.getExistingBookingStartTimes.fold(
+          e => assert(e)(hasMessage(containsString("Couldn't load schedule"))),
+          a => assert(true)(isFalse)
+        )
     }
   ).provideLayer(
     MBOService.live ++ AppState.live ++ HttpClientZioBackend.stubLayer ++ Logging.ignore
   )
-  // TODO test sign in submits auth token, but can't with ZIO sttp backend?
+  // TODO test sign in submits auth token, but can't with ZIO sttp backend
+  // because can't intercept request?
 }

@@ -13,13 +13,13 @@ object Cookie {
     * will expire in at least 5 minutes from now.
     */
   def hasValidCookie: ZIO[AppState with Clock with Logging, Nothing, Boolean] = for {
+    _          <- log.info(s"Checking cookie validity")
     cookies    <- ZIO.accessM[AppState](_.get.get)
     now        <- currentTime(TimeUnit.MILLISECONDS)
-    _          <- log.info(s"Checking for cookies $cookies")
     fiveMinutes = 1000 * 60 * 5
   } yield {
     cookies.nonEmpty && cookies.forall(
-      _.expires.map(c => c.toEpochMilli() > now + fiveMinutes).getOrElse(true)
+      _.expires.forall(c => c.toEpochMilli > now + fiveMinutes)
     )
   }
 
