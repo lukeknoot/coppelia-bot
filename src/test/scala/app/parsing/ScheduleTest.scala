@@ -3,9 +3,6 @@ package app.parsing
 import zio.test._
 import app.parsing.Schedule
 import Assertion._
-import zio.ZManaged
-import zio.ZIO
-import scala.io.Source
 import app.TestUtil
 
 object ScheduleTest extends DefaultRunnableSpec with TestUtil {
