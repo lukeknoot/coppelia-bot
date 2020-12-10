@@ -21,7 +21,7 @@ lazy val app = (project in file("."))
     libraryDependencies ++= Dependencies.mainDeps,
     libraryDependencies ++= Dependencies.testDeps,
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-    dockerExposedPorts ++= Seq(8080)
+    dockerBaseImage := "openjdk:13.0.2"
   )
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
