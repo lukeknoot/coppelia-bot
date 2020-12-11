@@ -23,10 +23,10 @@ object MBOService {
   type RCheckout                     = AppState with Logging with SttpClient
 
   trait Service {
-    def addToCart(dc: DanceClass): RIO[RAddToCart, String]
+    def addToCart(dc: DanceClass): RIO[RAddToCart, Unit]
     def signIn(user: String, pass: String): RIO[RSignIn, Unit]
     def getExistingBookingStartTimes: RIO[RGetExistingBookingStartTimes, List[String]]
-    def checkout: RIO[RCheckout, String]
+    def checkout: RIO[RCheckout, Unit]
   }
 
   val service = ZIO.service[Service]
@@ -69,7 +69,7 @@ object MBOService {
         response <- send(request)
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
-        body
+        ()
       }
     }
 
@@ -86,7 +86,7 @@ object MBOService {
         response <- send(request)
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
-        body
+        ()
       }
     }
 

@@ -10,7 +10,7 @@ object App extends zio.App {
     Booking.bookingCycle
       .catchAll(e => log.info(e.toString))
       .repeat(Schedule.fixed(1.minute).jittered(1.0, 2.0))
-      .provideLayer(AppEnv.live)
+      .provideCustomLayer(AppEnv.live)
       .exitCode
 
 }

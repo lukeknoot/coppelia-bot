@@ -32,10 +32,10 @@ object SDCServiceTest extends DefaultRunnableSpec with TestUtil {
       )
       for {
         _       <- managedResource("example-classes.json").use(d => stub(d))
-        classes <- SDCService.Live.getClasses
+        classes <- SDCService.getClasses
       } yield {
         assert(classes)(contains(exampleClassFromAPI))
       }
-    }.provideLayer(HttpClientZioBackend.stubLayer ++ Logging.ignore)
+    }.provideLayer(SDCService.live ++ HttpClientZioBackend.stubLayer ++ Logging.ignore)
   }
 }
