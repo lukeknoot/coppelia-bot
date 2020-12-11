@@ -13,7 +13,7 @@ import AppState.AppState
 object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
 
   override val spec = suite("MBOService")(
-    testM("getExistingBookingStartTimes retrieves start times") {
+    testM("Retrieves start time from schedule") {
       val httpStub = managedResource("schedule-mock.html").use(data => {
         whenRequestMatchesPartial {
           case r
@@ -29,7 +29,7 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         assert(startTimes)(equalTo(List("12/1/2020 5:30 PM")))
       })
     },
-    testM("getExistingBookingStartTimes retrieves multiple start times") {
+    testM("Retrieves multiple start times for schedule") {
       val httpStub = managedResource("schedule-mock-multiple.html").use(data => {
         whenRequestMatchesPartial {
           case r
@@ -51,7 +51,7 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         )
       )
     },
-    testM("signIn saves cookies") {
+    testM("Ssaves cookies if sign-in succeeds") {
       val initialSignInPageStub = whenRequestMatches(r =>
         r.uri.toString.startsWith(MBOService.Live.signInPageURI) && r.method == Method.GET
       ).thenRespond(
@@ -83,6 +83,52 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
           e => assert(e)(hasMessage(containsString("Couldn't load schedule"))),
           a => assert(true)(isFalse)
         )
+    },
+    testM("Fails if sign-in fails") {
+      val initialSignInPageStub = whenRequestMatches(r =>
+        r.uri.toString.startsWith(MBOService.Live.signInPageURI) && r.method == Method.GET
+      ).thenRespondOk
+
+      val signInPostStub = managedResource("failed-signin.html").use(data => {
+        whenRequestMatches(r =>
+          r.uri.toString.startsWith(MBOService.Live.signInURI) && r.method == Method.POST
+        ).thenRespond(Response.ok(data))
+      })
+
+      for {
+        _ <- initialSignInPageStub
+        _ <- signInPostStub
+        r <- MBOService.signIn("", "").run
+      } yield {
+        assert(r)(fails(hasMessage(containsString("Failed to sign-in"))))
+      }
+    },
+    testM("Wipes cookies if sign-in fails") {
+      val initialSignInPageStub = whenRequestMatches(r =>
+        r.uri.toString.startsWith(MBOService.Live.signInPageURI) && r.method == Method.GET
+      ).thenRespond(
+        Response(
+          "",
+          StatusCode.Ok,
+          "OK",
+          Seq(Header.setCookie(CookieWithMeta("test-cookie", "value")))
+        )
+      )
+
+      val signInPostStub = managedResource("failed-signin.html").use(data => {
+        whenRequestMatches(r =>
+          r.uri.toString.startsWith(MBOService.Live.signInURI) && r.method == Method.POST
+        ).thenRespond(Response.ok(data))
+      })
+
+      for {
+        _       <- initialSignInPageStub
+        _       <- signInPostStub
+        _       <- MBOService.signIn("", "").run
+        cookies <- ZIO.accessM[AppState](_.get.get)
+      } yield {
+        assert(cookies)(isEmpty)
+      }
     }
   ).provideLayer(
     MBOService.live ++ AppState.live ++ HttpClientZioBackend.stubLayer ++ Logging.ignore

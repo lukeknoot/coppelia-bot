@@ -9,8 +9,8 @@ import app.AppState.AppState
 import zio.logging._
 import sttp.client3.httpclient.zio._
 import parsing.Schedule
-import sttp.model.CookieWithMeta
 import models.Error._
+import sttp.model._
 
 object MBOService {
 
@@ -135,6 +135,19 @@ object MBOService {
         )
       }
 
+      def redirectWithCookies(uri: String) = {
+        for {
+          _        <- log.info("Redirecting with cookie")
+          cookies  <- ZIO.accessM[AppState](_.get.get)
+          request   = basicRequest
+                        .get(uri"$uri")
+                        .cookies(cookies)
+          response <- send(request)
+        } yield {
+          response
+        }
+      }
+
       def getRequest(authData: AuthData) = Try {
         basicRequest
           .post(uri"$signInURI")
@@ -149,14 +162,31 @@ object MBOService {
           .followRedirects(false)
       }
 
+      def didFail(body: String) =
+        body.contains("The email and password you entered don&#39;t match")
+
       for {
         _         <- log.info("Signing in")
         authData  <- loadAuthData
-        _         <- log.info("Saving cookies")
         cookieRef <- ZIO.access[AppState](_.get)
+        _         <- log.info("Saving cookies")
         _         <- cookieRef.set(authData.cookies)
         request   <- ZIO.fromTry(getRequest(authData))
-        _         <- send(request)
+        response  <- send(request)
+                       .flatMap { r =>
+                         val locationHeader = r.headers.find(_.is(HeaderNames.Location))
+                         if (r.code == StatusCode.Found && locationHeader.nonEmpty)
+                           // STTP doesn't currently seem to redirect with cookies (?)
+                           // so we have some special handling here.
+                           redirectWithCookies(locationHeader.get.value)
+                         else ZIO.succeed(r)
+                       }
+        body      <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
+        _         <- if (didFail(body))
+                       ZIO
+                         .fail(new Exception("Failed to sign-in."))
+                         .ensuring(log.info("Wiping cookies") *> cookieRef.set(Seq()))
+                     else ZIO.succeed(())
       } yield {
         ()
       }
@@ -168,10 +198,15 @@ object MBOService {
       * tell us if it's a timeout.
       */
     def failIfTimeout(htmlBody: String): RIO[Logging, Unit] = {
-      if (htmlBody.contains("timeout") || htmlBody.contains("timed out")) {
-        ZIO.fail(new Exception("Couldn't load schedule"))
-      } else {
-        log.info("Found no existing bookings")
+      for {
+        textBody <- ZIO.fromTry(Try(Jsoup.parse(htmlBody).select("body").text()))
+        _        <- if (textBody.contains("timeout") || textBody.contains("timed out")) {
+                      ZIO.fail(new Exception("Couldn't load schedule. Seems to have timed out."))
+                    } else {
+                      ZIO.succeed(())
+                    }
+      } yield {
+        ()
       }
     }
 
@@ -181,10 +216,11 @@ object MBOService {
       request    <- ZIO.fromTry(Try(basicRequest.get(uri"$scheduleURI").cookies(cookies)))
       response   <- send(request)
       body       <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
+      _          <- failIfTimeout(body)
       startTimes <- Schedule.getStartTimes(body)
       _          <- if (startTimes.nonEmpty)
                       log.info(s"Found existing bookings for times: ${startTimes.toString()}")
-                    else failIfTimeout(body)
+                    else log.info("Found no existing bookings")
     } yield {
       startTimes
     }
