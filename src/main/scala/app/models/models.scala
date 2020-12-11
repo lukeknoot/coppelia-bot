@@ -4,7 +4,6 @@ import app.parsing.Date
 import sttp.model.CookieWithMeta
 import java.util.Calendar
 import java.util.TimeZone
-import java.text.SimpleDateFormat
 
 case class Filter(
     date: List[String] = List(Filter.all),
@@ -52,20 +51,6 @@ case class DanceClass(
   }
 
   def bookable: Boolean = canBook || available == "1" || waitlist == "1"
-
-  def toReadableString: String = {
-    val calendar   = Calendar.getInstance(TimeZone.getTimeZone("Australia/Sydney"))
-    calendar.setTimeInMillis(Date.parseClassDateStr(start))
-    val dateFormat = new SimpleDateFormat("EEEEE");
-    val dayOfWeek  = dateFormat.format(calendar.getTime());
-
-    val state =
-      if (waitlist == "1") "waitlist"
-      else if (canBook || available == "1") "confirmed"
-      else "unbookable"
-
-    s"$title on $dayOfWeek $start with ${staff.name} ($state)"
-  }
 }
 
 case class Description(name: String)

@@ -7,6 +7,9 @@ import parsing.Date
 import zio.logging._
 
 import java.util.concurrent.TimeUnit
+import java.util.Calendar
+import java.util.TimeZone
+import java.text.SimpleDateFormat
 
 object Booking {
 
@@ -28,9 +31,23 @@ object Booking {
       })
     }
 
+  private def toReadableString(dc: DanceClass): String = {
+    val calendar   = Calendar.getInstance(TimeZone.getTimeZone("Australia/Sydney"))
+    calendar.setTimeInMillis(Date.parseClassDateStr(dc.start))
+    val dateFormat = new SimpleDateFormat("EEEEE");
+    val dayOfWeek  = dateFormat.format(calendar.getTime());
+
+    val state =
+      if (dc.waitlist == "1") "waitlist"
+      else if (dc.canBook || dc.available == "1") "confirmed"
+      else "invalid state - double check booking"
+
+    s"${dc.title} on $dayOfWeek ${dc.start} with ${dc.staff.name} ($state)"
+  }
+
   private def getBookingSuccessMessage(booked: List[DanceClass]): String =
-    s"""Successfully booked classes: ${booked
-      .map(c => s"\n- ${c.toReadableString}")
+    s"""Successfully booked classes:${booked
+      .map(dc => s"\n- ${toReadableString(dc)}")
       .mkString}"""
 
   val bookingCycle = for {

@@ -18,6 +18,8 @@ object BookingTest extends DefaultRunnableSpec with TestUtil {
 
   override def spec = suite("Booking cycle")(
     testM("Sends message to telegram after successful booking") {
+      val bookingMessage = "Successfully booked classes:" +
+        "\n- Ballet on Tuesday 2020-12-08 08:15:00 with Alexandra Rolfe (confirmed)"
       for {
         _ <- setNowTo("2020-12-08 00:00:00")
         r <- zio.Ref.make[Option[String]](None)
@@ -27,7 +29,9 @@ object BookingTest extends DefaultRunnableSpec with TestUtil {
              )
         v <- r.get
       } yield {
-        assert(v)(Assertion.isSome(containsString("Successfully booked classes")))
+        assert(v)(
+          Assertion.isSome(equalTo(bookingMessage))
+        )
       }
     },
     testM("Does not send a message to telegram if no booking") {
