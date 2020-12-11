@@ -12,7 +12,7 @@ val mainCompilerOptions = Seq(
 
 lazy val app = (project in file("."))
   .settings(
-    name := "dance-auto-booking",
+    name := "coppelia-bot",
     organization := "net.lukeknight",
     scalaVersion := "2.13.2",
     version := "0.0.1",
