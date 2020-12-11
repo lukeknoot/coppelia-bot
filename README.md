@@ -21,4 +21,4 @@ For production, this expects valid values in application.conf.
 - `sbt docker:publishLocal`
 
 ### Run container
-- `sudo docker run -d dance-auto-booking:<tag>`
+- `sudo docker run -d coppelia-bot:<tag>`
