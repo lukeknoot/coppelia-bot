@@ -23,9 +23,9 @@ object BookingTest extends DefaultRunnableSpec with TestUtil {
       for {
         _ <- setNowTo("2020-12-08 00:00:00")
         r <- zio.Ref.make[Option[String]](None)
-        l  = ZLayer.succeed(mockTelegramService(r))
+        t  = ZLayer.succeed(mockTelegramService(r))
         _ <- Booking.bookingCycle.provideCustomLayer(
-               baseLayer ++ l ++ ZLayer.succeed(mockSDCServiceWithClasses)
+               baseLayer ++ t ++ ZLayer.succeed(mockSDCServiceWithClasses)
              )
         v <- r.get
       } yield {
@@ -39,7 +39,7 @@ object BookingTest extends DefaultRunnableSpec with TestUtil {
         r <- zio.Ref.make[Option[String]](None)
         t  = ZLayer.succeed(mockTelegramService(r))
         _ <- Booking.bookingCycle.provideCustomLayer(
-               t ++ baseLayer ++ ZLayer.succeed(mockSDCServiceNoClasses)
+               baseLayer ++ t ++ ZLayer.succeed(mockSDCServiceNoClasses)
              )
         v <- r.get
       } yield {
