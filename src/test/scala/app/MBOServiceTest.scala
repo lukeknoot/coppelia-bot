@@ -51,7 +51,7 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         )
       )
     },
-    testM("Ssaves cookies if sign-in succeeds") {
+    testM("Saves cookies if sign-in succeeds") {
       val initialSignInPageStub = whenRequestMatches(r =>
         r.uri.toString.startsWith(MBOService.Live.signInPageURI) && r.method == Method.GET
       ).thenRespond(

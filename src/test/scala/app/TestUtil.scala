@@ -6,6 +6,7 @@ import app.models._
 import java.text.SimpleDateFormat
 import java.time.Duration
 import zio.test.environment.TestClock
+import java.util.TimeZone
 
 trait TestUtil {
   def managedResource(resourceName: String): ZManaged[Any, Nothing, String] = ZManaged
@@ -17,7 +18,8 @@ trait TestUtil {
     }
 
   def setNowTo(timeStr: String): zio.URIO[TestClock, Unit] = {
-    val sdf  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    val sdf  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    sdf.setTimeZone(TimeZone.getTimeZone("Australia/Sydney"))
     val date = sdf.parse(timeStr);
     TestClock.setTime(Duration.ofMillis(date.toInstant().toEpochMilli))
   }

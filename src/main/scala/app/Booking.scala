@@ -8,7 +8,6 @@ import zio.logging._
 
 import java.util.concurrent.TimeUnit
 import java.util.Calendar
-import java.util.TimeZone
 import java.text.SimpleDateFormat
 
 object Booking {
@@ -32,9 +31,10 @@ object Booking {
     }
 
   private def toReadableString(dc: DanceClass): String = {
-    val calendar   = Calendar.getInstance(TimeZone.getTimeZone("Australia/Sydney"))
+    val calendar   = Calendar.getInstance(Date.defaultTimeZone)
     calendar.setTimeInMillis(Date.parseClassDateStr(dc.start))
     val dateFormat = new SimpleDateFormat("EEEEE");
+    dateFormat.setTimeZone(Date.defaultTimeZone)
     val dayOfWeek  = dateFormat.format(calendar.getTime());
 
     val state =
