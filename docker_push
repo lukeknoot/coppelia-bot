@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+docker image tag coppelia-bot "$DOCKER_USERNAME/coppelia-bot"
+docker push "$DOCKER_USERNAME/coppelia-bot"

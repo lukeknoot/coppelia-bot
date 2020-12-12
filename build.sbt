@@ -21,7 +21,13 @@ lazy val app = (project in file("."))
     libraryDependencies ++= Dependencies.mainDeps,
     libraryDependencies ++= Dependencies.testDeps,
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-    dockerBaseImage := "openjdk:13.0.2"
+    dockerBaseImage := "openjdk:13.0.2",
+    dockerUpdateLatest := true,
+    // https://github.com/sbt/sbt-native-packager/issues/853
+    // Can't specify only for docker build
+    javaOptions in Universal ++= Seq(
+      "-Dconfig.file=/application.conf"
+    )
   )
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)

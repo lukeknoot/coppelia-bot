@@ -1,0 +1,17 @@
+language: scala
+scala:
+  - 2.13.2
+jdk:
+  - openjdk11
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+services:
+  - docker
+script: sbt test && sbt docker:publishLocal
+deploy:
+  skip_cleanup: true
+  provider: script
+  script: bash docker_push
+  on:
+    branch: main

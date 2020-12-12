@@ -1,0 +1,4 @@
+#!/bin/bash
+docker create --name coppelia-bot "coppelia-bot:latest"
+docker cp application.conf "coppelia-bot://application.conf"
+docker start coppelia-bot
