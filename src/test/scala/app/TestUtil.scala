@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat
 import java.time.Duration
 import zio.test.environment.TestClock
 import java.util.TimeZone
+import _root_.app.models.Error.OutOfVouchersException
 
 trait TestUtil {
   def managedResource(resourceName: String): ZManaged[Any, Nothing, String] = ZManaged
@@ -57,6 +58,17 @@ trait TestUtil {
         : RIO[MBOService.RGetExistingBookingStartTimes, List[String]] = ZIO.succeed(List())
 
     override def checkout: RIO[MBOService.RCheckout, Unit] = ZIO.succeed(())
+  }
+
+  def mockMBOServiceNoVouchers = new MBOService.Service {
+    override def addToCart(dc: DanceClass): RIO[MBOService.RAddToCart, Unit] = ZIO.succeed(())
+
+    override def signIn(user: String, pass: String): RIO[MBOService.RSignIn, Unit] = ZIO.succeed(())
+
+    override def getExistingBookingStartTimes
+        : RIO[MBOService.RGetExistingBookingStartTimes, List[String]] = ZIO.succeed(List())
+
+    override def checkout: RIO[MBOService.RCheckout, Unit] = ZIO.fail(OutOfVouchersException)
   }
 
   val mockSDCServiceWithClasses: SDCService.Service = new SDCService.Service {

@@ -45,6 +45,7 @@ object MBOService {
     val checkoutURI   = s"$baseURI/cart/proceed_to_checkout"
     val signInURI     = s"$baseURI/session"
     val scheduleURI   = s"$baseURI/client/schedules"
+    val buyVoucherURI = s"$baseURI/cart/select_service"
 
     override def addToCart(dc: DanceClass) = {
       val queryParams = Map(
@@ -64,8 +65,8 @@ object MBOService {
 
       for {
         _        <- log.info(s"Adding ${dc.toString} to cart")
-        cookies  <- ZIO.accessM[AppState](_.get.get)
-        request  <- ZIO.fromTry(getRequest(cookies))
+        state    <- ZIO.accessM[AppState](_.get.get)
+        request  <- ZIO.fromTry(getRequest(state.cookies))
         response <- send(request)
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
@@ -75,19 +76,52 @@ object MBOService {
 
     override def checkout = {
 
+      def failIfNoVouchers(r: Response[Either[String, String]]) = {
+        val locationHeader = r.headers.find(_.is(HeaderNames.Location))
+        if (r.code == StatusCode.Found && locationHeader.nonEmpty) {
+          val uri = locationHeader.get.value
+          if (uri == buyVoucherURI) {
+            ZIO.fail(OutOfVouchersException)
+          } else {
+            ZIO.succeed(r)
+          }
+        } else {
+          ZIO.succeed(r)
+        }
+      }
+
       def getRequest(cookies: Seq[CookieWithMeta]) = Try {
-        basicRequest.get(uri"$checkoutURI").cookies(cookies)
+        basicRequest.get(uri"$checkoutURI").cookies(cookies).followRedirects(false)
       }
 
       for {
         _        <- log.info("Checking out")
-        cookies  <- ZIO.accessM[AppState](_.get.get)
-        request  <- ZIO.fromTry(getRequest(cookies))
-        response <- send(request)
+        state    <- ZIO.accessM[AppState](_.get.get)
+        request  <- ZIO.fromTry(getRequest(state.cookies))
+        response <- send(request) >>= failIfNoVouchers
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
         ()
       }
+    }
+
+    // STTP doesn't currently seem to redirect with cookies (?)
+    // so we have some special handling here.
+    private def redirectWithCookies(r: Response[Either[String, String]]) = {
+      val locationHeader = r.headers.find(_.is(HeaderNames.Location))
+      if (r.code == StatusCode.Found && locationHeader.nonEmpty) {
+        val uri = locationHeader.get.value
+        for {
+          _        <- log.info("Redirecting with cookie")
+          state    <- ZIO.accessM[AppState](_.get.get)
+          request   = basicRequest
+                        .get(uri"$uri")
+                        .cookies(state.cookies)
+          response <- send(request)
+        } yield {
+          response
+        }
+      } else ZIO.succeed(r)
     }
 
     private def getAuthToken(html: String): Task[String] = ZIO
@@ -135,19 +169,6 @@ object MBOService {
         )
       }
 
-      def redirectWithCookies(uri: String) = {
-        for {
-          _        <- log.info("Redirecting with cookie")
-          cookies  <- ZIO.accessM[AppState](_.get.get)
-          request   = basicRequest
-                        .get(uri"$uri")
-                        .cookies(cookies)
-          response <- send(request)
-        } yield {
-          response
-        }
-      }
-
       def getRequest(authData: AuthData) = Try {
         basicRequest
           .post(uri"$signInURI")
@@ -166,27 +187,20 @@ object MBOService {
         body.contains("The email and password you entered don&#39;t match")
 
       for {
-        _         <- log.info("Signing in")
-        authData  <- loadAuthData
-        cookieRef <- ZIO.access[AppState](_.get)
-        _         <- log.info("Saving cookies")
-        _         <- cookieRef.set(authData.cookies)
-        request   <- ZIO.fromTry(getRequest(authData))
-        response  <- send(request)
-                       .flatMap { r =>
-                         val locationHeader = r.headers.find(_.is(HeaderNames.Location))
-                         if (r.code == StatusCode.Found && locationHeader.nonEmpty)
-                           // STTP doesn't currently seem to redirect with cookies (?)
-                           // so we have some special handling here.
-                           redirectWithCookies(locationHeader.get.value)
-                         else ZIO.succeed(r)
-                       }
-        body      <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
-        _         <- if (didFail(body))
-                       ZIO
-                         .fail(new Exception("Failed to sign-in."))
-                         .ensuring(log.info("Wiping cookies") *> cookieRef.set(Seq()))
-                     else ZIO.succeed(())
+        _        <- log.info("Signing in")
+        authData <- loadAuthData
+        stateRef <- ZIO.access[AppState](_.get)
+        _        <- log.info("Saving cookies")
+        state    <- stateRef.get
+        _        <- stateRef.set(state.copy(cookies = authData.cookies))
+        request  <- ZIO.fromTry(getRequest(authData))
+        response <- send(request) >>= redirectWithCookies
+        body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
+        _        <- if (didFail(body))
+                      ZIO
+                        .fail(new Exception("Failed to sign-in."))
+                        .ensuring(log.info("Wiping cookies") *> stateRef.set(state.copy(cookies = Seq())))
+                    else ZIO.succeed(())
       } yield {
         ()
       }
@@ -212,8 +226,8 @@ object MBOService {
 
     override def getExistingBookingStartTimes = for {
       _          <- log.info("Getting existing bookings")
-      cookies    <- ZIO.accessM[AppState](_.get.get)
-      request    <- ZIO.fromTry(Try(basicRequest.get(uri"$scheduleURI").cookies(cookies)))
+      state      <- ZIO.accessM[AppState](_.get.get)
+      request    <- ZIO.fromTry(Try(basicRequest.get(uri"$scheduleURI").cookies(state.cookies)))
       response   <- send(request)
       body       <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       _          <- failIfTimeout(body)

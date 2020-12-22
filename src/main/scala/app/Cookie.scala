@@ -14,7 +14,7 @@ object Cookie {
     */
   def hasValidCookie: ZIO[AppState with Clock with Logging, Nothing, Boolean] = for {
     _          <- log.info(s"Checking cookie validity")
-    cookies    <- ZIO.accessM[AppState](_.get.get)
+    cookies    <- ZIO.accessM[AppState](_.get.get).map(_.cookies)
     now        <- currentTime(TimeUnit.MILLISECONDS)
     fiveMinutes = 1000 * 60 * 5
   } yield {

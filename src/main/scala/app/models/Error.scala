@@ -2,6 +2,14 @@ package app.models
 
 object Error {
 
-  case class ErrorHTTPResponse(s: String) extends Exception(s)
+  sealed trait CoppeliaError extends Throwable {
+    def message: String
+  }
+
+  case class ErrorHTTPResponse(message: String) extends CoppeliaError
+
+  case object OutOfVouchersException extends CoppeliaError {
+    def message = "Ran out of vouchers"
+  }
 
 }

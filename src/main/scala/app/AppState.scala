@@ -4,10 +4,12 @@ import zio.Ref
 import sttp.model.CookieWithMeta
 import zio.Has
 
+case class State(cookies: Seq[CookieWithMeta], notifiedForVoucher: Boolean)
+
 object AppState {
 
-  type AppState = Has[Ref[Seq[CookieWithMeta]]]
+  type AppState = Has[Ref[State]]
 
-  val live = Ref.make[Seq[CookieWithMeta]](Seq()).toLayer
+  val live = Ref.make[State](State(Seq(), notifiedForVoucher = false)).toLayer
 
 }

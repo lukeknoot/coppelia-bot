@@ -69,7 +69,7 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         _       <- initialSignInPageStub
         _       <- signInPostStub
         _       <- MBOService.signIn("", "")
-        cookies <- ZIO.accessM[AppState](_.get.get)
+        cookies <- ZIO.accessM[AppState](_.get.get).map(_.cookies)
       } yield assert(cookies)(equalTo(Seq(CookieWithMeta("test-cookie", "value"))))
     },
     testM("Fails if schedule loading times out") {
@@ -125,7 +125,7 @@ object MBOServiceTest extends DefaultRunnableSpec with TestUtil {
         _       <- initialSignInPageStub
         _       <- signInPostStub
         _       <- MBOService.signIn("", "").run
-        cookies <- ZIO.accessM[AppState](_.get.get)
+        cookies <- ZIO.accessM[AppState](_.get.get).map(_.cookies)
       } yield {
         assert(cookies)(isEmpty)
       }
