@@ -198,7 +198,7 @@ object MBOService {
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
         _        <- if (didFail(body))
                       ZIO
-                        .fail(new Exception("Failed to sign-in."))
+                        .fail(ErrorHTTPResponse("Failed to sign-in."))
                         .ensuring(log.info("Wiping cookies") *> stateRef.set(state.copy(cookies = Seq())))
                     else ZIO.succeed(())
       } yield {
@@ -215,7 +215,7 @@ object MBOService {
       for {
         textBody <- ZIO.fromTry(Try(Jsoup.parse(htmlBody).select("body").text()))
         _        <- if (textBody.contains("timeout") || textBody.contains("timed out")) {
-                      ZIO.fail(new Exception("Couldn't load schedule. Seems to have timed out."))
+                      ZIO.fail(ErrorHTTPResponse("Couldn't load schedule. Seems to have timed out."))
                     } else {
                       ZIO.succeed(())
                     }

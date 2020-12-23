@@ -61,7 +61,7 @@ object Booking {
       .map(dc => s"\n- ${toReadableString(dc, showState = false)}")
       .mkString}
       |
-      |${e.getMessage()}
+      |${e.getExMessage}
       """.stripMargin
 
   def notifyOnce(message: String) = for {
