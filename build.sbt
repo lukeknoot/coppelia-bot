@@ -14,7 +14,7 @@ lazy val app = (project in file("."))
   .settings(
     name := "coppelia-bot",
     organization := "net.lukeknight",
-    scalaVersion := "2.13.2",
+    scalaVersion := "2.13.4",
     version := "0.0.1",
     scalacOptions ++= mainCompilerOptions,
     javaOptions in reStart += "-Dconfig.resource=application.dev.conf",
