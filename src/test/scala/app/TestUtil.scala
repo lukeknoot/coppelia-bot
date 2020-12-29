@@ -15,7 +15,7 @@ trait TestUtil {
       ZIO.effectTotal(Source.fromResource(resourceName))
     } { source => ZIO.effectTotal(source.close) }
     .mapM { source =>
-      ZIO.effectTotal(source.getLines.mkString)
+      ZIO.effectTotal(source.getLines().mkString)
     }
 
   def setNowTo(timeStr: String): zio.URIO[TestClock, Unit] = {
