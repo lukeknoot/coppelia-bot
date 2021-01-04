@@ -52,7 +52,7 @@ object SDCService {
       for {
         request  <- ZIO.fromTry(classesRequest)
         _        <- log.info("Retrieving classes")
-        response <- send(request)
+        response <- send(request).mapError(new ErrorHTTPNetwork(_))
         body     <- ZIO.fromEither(response.body).mapError(new ErrorHTTPResponse(_))
         parsed   <- ZIO.fromEither(parseClassJson(body))
       } yield {

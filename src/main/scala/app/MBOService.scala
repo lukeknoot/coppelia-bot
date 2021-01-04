@@ -67,7 +67,7 @@ object MBOService {
         _        <- log.info(s"Adding ${dc.toString} to cart")
         state    <- ZIO.accessM[AppState](_.get.get)
         request  <- ZIO.fromTry(getRequest(state.cookies))
-        response <- send(request)
+        response <- send(request).mapError(new ErrorHTTPNetwork(_))
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
         ()
@@ -98,7 +98,7 @@ object MBOService {
         _        <- log.info("Checking out")
         state    <- ZIO.accessM[AppState](_.get.get)
         request  <- ZIO.fromTry(getRequest(state.cookies))
-        response <- send(request) >>= failIfNoVouchers
+        response <- send(request).mapError(new ErrorHTTPNetwork(_)) >>= failIfNoVouchers
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       } yield {
         ()
@@ -117,7 +117,7 @@ object MBOService {
           request   = basicRequest
                         .get(uri"$uri")
                         .cookies(state.cookies)
-          response <- send(request)
+          response <- send(request).mapError(new ErrorHTTPNetwork(_))
         } yield {
           response
         }
@@ -138,7 +138,7 @@ object MBOService {
     private def loadAuthData =
       for {
         _         <- log.info("Loading cookie and auth token for sign in")
-        response  <- send(basicRequest.get(uri"$signInPageURI"))
+        response  <- send(basicRequest.get(uri"$signInPageURI")).mapError(new ErrorHTTPNetwork(_))
         htmlBody  <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
         authToken <- getAuthToken(htmlBody)
       } yield {
@@ -150,10 +150,11 @@ object MBOService {
         password: String
     ) = {
 
-      /** Sttp automatically converts Map[String, String] to
-        * application/x-www-form-urlencoded form-data if supplies
-        * as the body.
-        */
+      /**
+       * Sttp automatically converts Map[String, String] to
+       * application/x-www-form-urlencoded form-data if supplies
+       * as the body.
+       */
       def getFormData(
           authToken: String,
           username: String,
@@ -194,7 +195,7 @@ object MBOService {
         state    <- stateRef.get
         _        <- stateRef.set(state.copy(cookies = authData.cookies))
         request  <- ZIO.fromTry(getRequest(authData))
-        response <- send(request) >>= redirectWithCookies
+        response <- send(request).mapError(new ErrorHTTPNetwork(_)) >>= redirectWithCookies
         body     <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
         _        <- if (didFail(body))
                       ZIO
@@ -206,11 +207,12 @@ object MBOService {
       }
     }
 
-    /** TODO: Confirm timeout behaviour of site.
-      *
-      * Have only seen this once but seems like their page will
-      * tell us if it's a timeout.
-      */
+    /**
+     * TODO: Confirm timeout behaviour of site.
+     *
+     * Have only seen this once but seems like their page will
+     * tell us if it's a timeout.
+     */
     def failIfTimeout(htmlBody: String): RIO[Logging, Unit] = {
       for {
         textBody <- ZIO.fromTry(Try(Jsoup.parse(htmlBody).select("body").text()))
@@ -228,7 +230,7 @@ object MBOService {
       _          <- log.info("Getting existing bookings")
       state      <- ZIO.accessM[AppState](_.get.get)
       request    <- ZIO.fromTry(Try(basicRequest.get(uri"$scheduleURI").cookies(state.cookies)))
-      response   <- send(request)
+      response   <- send(request).mapError(new ErrorHTTPNetwork(_))
       body       <- ZIO.fromEither(response.body).mapError(ErrorHTTPResponse)
       _          <- failIfTimeout(body)
       startTimes <- Schedule.getStartTimes(body)

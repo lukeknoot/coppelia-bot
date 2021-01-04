@@ -3,6 +3,7 @@ package app
 import zio._
 import sttp.client3.httpclient.zio._
 import sttp.client3._
+import models.Error._
 
 object TelegramService {
 
@@ -36,7 +37,7 @@ object TelegramService {
         request = basicRequest
                     .post(uri"${methodURI(token, Method.sendMessage)}")
                     .body(Map("chat_id" -> chatID, "text" -> m))
-        _      <- send(request)
+        _      <- send(request).mapError(new ErrorHTTPNetwork(_))
       } yield {
         ()
       }
